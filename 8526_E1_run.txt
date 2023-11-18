@@ -1,0 +1,8 @@
+1- Abrir 2 terminales para ejecutar a la vez 2 aplicaciones.
+2- Iniciar sesión, Se pueden crear usuarios nuevos introduciendo los datos de usuario y contraseña y dandole dos veces click al boton de iniciar sesion.
+3- Tras hacer el paso 2 en ambas aplicaciones, una debe crear el chat y la otra unirse al chat.
+4- Se abriran dos ventanas, una detras de la otra, deberás escribir en la que esta detrás y darle al boton para enviar.
+5- Desde la otra escribes y disfrutas el chat.
+
+nota: Por motivos de como estan definidas las clases de cliente y servidor, hasta que no se reciba un mensaje después de enviar uno la ventana no responderá, esto
+se arreglará cuando se envie un mensaje desde la otra aplicacion. Esto quiere decir que cuando envias un mensaje no podrás enviar otro hasta que no te responda el otro usuario
