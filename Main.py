@@ -5,6 +5,7 @@ from Servidor import Servidor
 from Cliente import Cliente
 from Cifrado import eliminarTemps,deleteCerts
 
+   
 def main(page):
     eliminarTemps()
     deleteCerts()
@@ -115,7 +116,10 @@ def main(page):
                     horizontal_alignment = ft.CrossAxisAlignment.CENTER
                 )
             )
+            
         page.update()
+        
+    pb = ft.ProgressBar(width=400, color="amber", bgcolor="#eeeeee")
     
     page.on_route_change = route_change
     

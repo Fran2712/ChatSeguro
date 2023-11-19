@@ -21,13 +21,13 @@ class Cliente():
         
         self.enviarCertificados(client_socket)
         self.leerCertificados(client_socket)
+        
+        #Verificacion de Certificados y Extraccion de clave pública
         verifCertUser= Cifrado.verificarCertificadosUser('certificados_recibidos_del_serv/certificate_AC_chain_recieved.pem',f'{self.user.nombreUsuario}_data/certificate_AC_chain.pem')
         if (verifCertUser):
             Cifrado.extraerClavePublica('certificados_recibidos_del_serv/certificate_server_recieved.pem', 'certificados_recibidos_del_serv/clave_publica_recibida.pem')
-    
-        #self.enviarFirma(client_socket)
-        #self.leerFirma(client_socket)
         
+        self.pb = ft.ProgressBar(width=400, color="amber", bgcolor="#eeeeee", visible=False) 
         txt = ft.TextField(
             hint_text="Mensaje",
             autofocus=True,
@@ -36,7 +36,7 @@ class Cliente():
             max_lines=5,
             filled=True,
             expand=True,
-            on_submit= lambda: self.enviarDatos(txt, client_socket, ventana)
+            on_submit= lambda x: self.enviarDatos(txt, client_socket, ventana)
         )
         chat = ft.ListView(
             expand=True,
@@ -56,7 +56,7 @@ class Cliente():
         )
         ventana.views.append(
                 ft.View(
-                    "/home/chat", [chat,chat_la],
+                    "/home/chat", [chat,chat_la,self.pb],
                     horizontal_alignment=ft.MainAxisAlignment.END
                 )
             )
@@ -64,39 +64,28 @@ class Cliente():
         
         # Cerrar la conexión
         #client_socket.close()
-
-    def enviarFirma(self,socket):
-        firma = Cifrado.generarFirma("publica.pem")
-        socket.send(firma)
-        
-    def leerFirma(self, socket):
-        firmaR = socket.recv(1024)
-        verif = Cifrado.verificarFirma()
-        
       
     def enviarCertificados(self,socket):
         ruta = f"{self.user.nombreUsuario}_data"
-        certificadosList = [f"certificate_{self.user.nombreUsuario}.pem", "certificate_AC2.pem","certificate_AC_chain.pem"]
+        certificadosList = [f"certificate_{self.user.nombreUsuario}.pem", "certificate_AC2.pem","certificate_AC_chain.pem"] # Lista de los certificados a enviar
         for file_name in certificadosList:
-            # Open the file in binary mode and read its contents
+            # Abre el archivo en modo binario y lee su contenido
             with open(f"{ruta}/{file_name}", 'rb') as f:
                 file_data = f.read()
-            # Send the size of the file
+            # Envia el tamaño del archivo
             socket.sendall(len(file_data).to_bytes(4, 'big'))
-            # Send the file data
+            # Envia los datos del archivo
             socket.sendall(file_data)
             
     def leerCertificados(self,socket):
         ruta = f"{self.user.nombreUsuario}_data"
         certificadosList = [f"certificate_server_recieved.pem", "certificate_AC2_recieved.pem","certificate_AC_chain_recieved.pem"]
         for file_name in certificadosList:
-            # Receive the size of the file
+            # Recibe el tamaño del archivo
             file_size = int.from_bytes(socket.recv(4), 'big')
-
-            # Receive the file data
+            # Recibe los datos del archivo
             file_data = socket.recv(file_size)
-
-            # Write the file data to a file
+            # Escribe los datos en un archivo
             newpath = os.path.join(os.getcwd(), 'certificados_recibidos_del_serv')
             if not os.path.exists(newpath):
                 os.makedirs(newpath)
@@ -107,16 +96,34 @@ class Cliente():
         newpath = os.path.join(os.getcwd(), 'temp')
         if not os.path.exists(newpath):
             os.makedirs(newpath)
-        nombreArchivo = 'archivo_recibido_del_Servidor.txt'
-        with open(os.path.join(newpath, nombreArchivo), 'wb') as archivo:
-            datos = client_socket.recv(1024) 
-            archivo.write(datos)
-        datosDescifrados = Cifrado.descifrarMensaje(os.path.join(newpath, nombreArchivo),f"{self.user.nombreUsuario}_data/private_key.pem")
-        text = datosDescifrados.decode()
-        self.chat.controls.append(ft.Text(text))
+        nombreArchivo = 'archivo_recibido_del_servidor.txt'
+        listaArchivos = ['archivo_recibido_del_servidor.txt','firma_recibida_del_servidor.txt'] 
+        self.pb.visible = True
         ventana.update()
-        if os.path.exists(os.path.join(newpath, nombreArchivo)):
-            os.remove(os.path.join(newpath, nombreArchivo))
+        for file_name in listaArchivos:
+            # Recibe el tamaño del archivo
+            file_size = int.from_bytes(client_socket.recv(4), 'big')
+            # Recibe los datos del archivo
+            file_data = client_socket.recv(file_size)
+            # Escribe los datos en un archivo
+            newpath = os.path.join(os.getcwd(), 'temp')
+            if not os.path.exists(newpath):
+                os.makedirs(newpath)
+            with open(os.path.join(newpath, file_name), 'wb') as f:
+                f.write(file_data)
+        datosDescifrados = Cifrado.descifrarMensaje(os.path.join(newpath, nombreArchivo),f"{self.user.nombreUsuario}_data/private_key.pem")
+        verif = Cifrado.verificarFirma(datosDescifrados, os.path.join(newpath, 'firma_recibida_del_servidor.txt'), 'certificados_recibidos_del_serv/clave_publica_recibida.pem')
+        # Si la verificacion es correcta 
+        if verif:
+            text = datosDescifrados.decode()
+            self.chat.controls.append(ft.Text(text))
+            self.pb.visible = False
+            ventana.update()
+            for archivo in listaArchivos:
+                if os.path.exists(os.path.join(newpath, archivo)):
+                    os.remove(os.path.join(newpath, archivo))
+        else:
+            print("ERROR, FALLO DE VERIFICACION DE FIRMA")
 
         
     def enviarDatos(self,text, socket, ventana):
@@ -124,10 +131,21 @@ class Cliente():
         text.value = ""
         text.update()
         textoC = self.user.nombreUsuario+ ": " + texto
+        
+        listaArchivos = []
         nombreArchivo = Cifrado.cifrarMensaje(textoC.encode(),"certificados_recibidos_del_serv/clave_publica_recibida.pem")
-        with open(nombreArchivo, 'rb') as archivo:
-            datos = archivo.read(1024)  # Lee datos del archivo en fragmentos
-            socket.send(datos)
+        listaArchivos.append(nombreArchivo)
+        nombreFirma = Cifrado.firmarMensaje(textoC.encode(),f"{self.user.nombreUsuario}_data/private_key.pem")
+        listaArchivos.append(nombreFirma)
+        
+        for file_name in listaArchivos:
+            # Abre el archivo en modo binario y lee su contenido
+            with open(file_name, 'rb') as f:
+                file_data = f.read(1024)
+            # Envia el tamaño del archivo
+            socket.sendall(len(file_data).to_bytes(4, 'big'))
+            # Envia los datos del archivo
+            socket.sendall(file_data)
         
         texto = "tu: " + texto
         self.chat.controls.append(ft.Text(texto))
