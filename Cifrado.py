@@ -128,7 +128,7 @@ def generarCertificado(user):
         ca0_cert = crypto.load_certificate(crypto.FILETYPE_PEM, ca0_cert_file.read())
 
         key = crypto.PKey()
-        key.generate_key(crypto.TYPE_RSA, 2048) #Genera una clave privada RSA de 2048 bits
+        key.generate_key(crypto.TYPE_RSA, 2048) #Genera una clave RSA de 2048 bits
         cert = crypto.X509()
         # Detalles del certificado 
         cert.get_subject().CN = "localhost"

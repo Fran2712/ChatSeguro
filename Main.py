@@ -4,7 +4,7 @@ from Usuario import Usuario
 from Servidor import Servidor
 from Cliente import Cliente
 from Cifrado import eliminarTemps,deleteCerts
-
+import re
    
 def main(page):
     eliminarTemps()
@@ -19,16 +19,19 @@ def main(page):
     def open_home(e):
         nUsuario = usuario.value
         nPass = contraseña.value
-        user = creacionUsuario(nUsuario,nPass)
-        select = connBD.buscarUsuario(user)
-        if select is None:
-            print("Usuario no existe")
-            connBD.guardarUsuario(user)
-        elif select == False:
-            print("Contraseña incorrecta") # TODO maximo intentos, otra oprtunidad
+        if not re.fullmatch(r'[A-Za-z0-9@#$%^&+=]{8,}', nPass):
+           print("Contraseña no valida") 
         else:
-            page.go("/home")
-            page.update()
+            user = creacionUsuario(nUsuario,nPass)
+            select = connBD.buscarUsuario(user)
+            if select is None:
+                print("Usuario no existe")
+                connBD.guardarUsuario(user)
+            elif select == False:
+                print("Contraseña incorrecta") # TODO maximo intentos, otra oprtunidad
+            else:
+                page.go("/home")
+                page.update()
             
     
     
