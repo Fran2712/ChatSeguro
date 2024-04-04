@@ -131,3 +131,4 @@ def main(page):
 
 if __name__=="__main__": 
     ft.app(target=main)
+    print("AAAAA")
